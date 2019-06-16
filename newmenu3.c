@@ -27,6 +27,7 @@ ALLEGRO_TIMER *timer;
 ALLEGRO_BITMAP *menubmp=NULL;
 ALLEGRO_FONT *fonte_menu;
 ALLEGRO_COLOR color;
+ALLEGRO_EVENT evento;
 void submenuchar();
 void submenulevels();
 void mainmenu();
@@ -55,6 +56,7 @@ int main(void)
     al_start_timer(timer);
 
     int estado_menu=0;
+    int char_escolhido=0;
     while(estado_menu!=SAIR_JOGO)
     {
         if (estado_menu == MAIN_MENU)//condicao padrao
@@ -88,21 +90,14 @@ int main(void)
 
     return 0;
 }
-void mainmenu(int jogar)
+void mainmenu(int estado_menu)
 {
     int i;
     int cont_tempo=0;
     int desenha=0;
-    int estado=0;
-    int submenumapa=0;
-    float y_menu = 3 * 720.0/8;
-    float x_menu = 1200/2;
-    float menu_inc = (720-y_menu)/5;
-    int submenupersonagens=0;
-    int submenuconfig=0;
     char menu_p[5][50] = {"PLAY","CHOOSE LEVEL","CHOOSE CHARACTER","SETTINGS","EXIT GAME"};
     int imenu=0;
-    ALLEGRO_EVENT evento;
+
     al_wait_for_event(fila_eventos, &evento);
     if(evento.type == ALLEGRO_EVENT_TIMER)
     {
@@ -117,26 +112,23 @@ void mainmenu(int jogar)
             printf("space||enter");
             if (imenu == 0)  //inicia jogo com level 1
             {
-                jogar=1;
-                estado++;
+                estado_menu=1;
             }
             else if (imenu == 1)  //submenu mapas
             {
-
-                submenumapa=1;
-                // estado++;
+                estado_menu=2;
             }
             else if (imenu == 2)//submenu personagens
             {
-                submenupersonagens=1;
+                estado_menu=3;
             }
             else if (imenu == 3)  //configuraçoes
             {
-                submenuconfig=1;
+                estado_menu=4;
             }
             else if (imenu == 4)  //sair
             {
-                estado = ESTADO_FIM;
+                estado_menu=5;
             }
         }
         else if (evento.keyboard.keycode == ALLEGRO_KEY_UP || evento.keyboard.keycode == ALLEGRO_KEY_W)//se tecla pressionada foi w ou seta
@@ -176,29 +168,290 @@ void mainmenu(int jogar)
         al_flip_display();
         desenha = 0;
     }
+
+}
+
+
+
+void submenuchar(int estado_menu,int char_escolhido)
+{
+    char submenu_characters[8][50]= {"BERTOTTO","WERMANN","SPIDER-MAN","BATMAN","LUKE SKYWALKER","STORMTROOPER","LOAD CHARACTER","BACK TO MAIN MENU"}; //matriz menu de personagens
+    int i;
+    int cont_tempo=0;
+    int desenha=0;
+
+    int imenu=0;
+
+    al_wait_for_event(fila_eventos, &evento);
+    if(evento.type == ALLEGRO_EVENT_TIMER)
+    {
+        al_draw_bitmap(menubmp,0,0,0);
+        cont_tempo++;
+        desenha = 1;
+    }
+    else if (evento.type == ALLEGRO_EVENT_KEY_DOWN)//se tecla foi pressionada
+
+        if (evento.keyboard.keycode == ALLEGRO_KEY_SPACE||evento.keyboard.keycode == ALLEGRO_KEY_ENTER)// se tecla pressionada foi espaço ou enter
+        {
+            printf("space||enter");
+            if (imenu == 0)
+            {
+                char_escolhido=1;
+            }
+            else if (imenu == 1)
+            {
+                char_escolhido=2;
+            }
+            else if (imenu == 2)
+            {
+                char_escolhido=3;
+            }
+            else if (imenu == 3)
+            {
+                char_escolhido=4;
+            }
+            else if (imenu == 4)
+            {
+                char_escolhido=5;
+            }
+            else if (imenu == 5)
+            {
+                char_escolhido=6;
+            }
+            else if (imenu == 6)
+            {
+                //load_char=1;
+            }
+            else if (imenu == 7)
+            {
+                estado_menu=0;
+            }
+
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_UP || evento.keyboard.keycode == ALLEGRO_KEY_W)//se tecla pressionada foi w ou seta
+        {
+            imenu--;
+            printf("key up||w\n");
+            if (imenu<0) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu =TAM_MENU_P-1;
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_DOWN || evento.keyboard.keycode == ALLEGRO_KEY_S)//se tecla pressionada foi s ou seta
+        {
+            printf("key down||s\n");
+            imenu++;
+            if (imenu==(TAM_MENU_P)) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu=0;
+
+
+
+        }
+    //desenha=1;
+    if(desenha && al_is_event_queue_empty(fila_eventos))  //desenha menu na tela
+    {
+        for(i=0; i<TAM_MENU_P; i++)
+        {
+            if(i==imenu)
+            {
+                color=al_map_rgb(255,255,255);
+            }
+            else
+            {
+                color=al_map_rgb(255,0,255);
+            }
+            al_draw_textf(fonte_menu, color, 600,50*(i+1), ALLEGRO_ALIGN_CENTRE, submenu_characters[i]);
+
+        }
+
+        al_flip_display();
+        desenha = 0;
+    }
     // Atualiza a tela
     //al_flip_display();
+
 }
-
-
-
-void submenuchar()
+void submenulevels(int estado_menu, int level_escolhido)
 {
-    char submenu_m[7][50]= {"BERTOTTO","WERMANN","SPIDER-MAN","BATMAN","LUKE SKYWALKER","STORMTROOPER","LOAD CHARACTER"}; //matriz menu de personagens
+    char submenu_levels[12][20]= {"LEVEL 1","LEVEL 2","LEVEL 3","LEVEL 4","LEVEL 5","LEVEL 6","LEVEL 7","LEVEL 8","LEVEL 9","LEVEL 10","LOAD LEVEL","BACK TO MAIN MENU"}; //matriz menu de niveis
+
+    int i;
+    int cont_tempo=0;
+    int desenha=0;
+
+    int imenu=0;
+
+    al_wait_for_event(fila_eventos, &evento);
+    if(evento.type == ALLEGRO_EVENT_TIMER)
+    {
+        al_draw_bitmap(menubmp,0,0,0);
+        cont_tempo++;
+        desenha = 1;
+    }
+    else if (evento.type == ALLEGRO_EVENT_KEY_DOWN)//se tecla foi pressionada
+
+        if (evento.keyboard.keycode == ALLEGRO_KEY_SPACE||evento.keyboard.keycode == ALLEGRO_KEY_ENTER)// se tecla pressionada foi espaço ou enter
+        {
+            printf("space||enter");
+            if (imenu == 0)
+            {
+                level_escolhido=1;
+            }
+            else if (imenu == 1)
+            {
+                level_escolhido=2;
+            }
+            else if (imenu == 2)
+            {
+                level_escolhido=3;
+            }
+            else if (imenu == 3)
+            {
+                level_escolhido=4;
+            }
+            else if (imenu == 4)
+            {
+                level_escolhido=5;
+            }
+            else if (imenu == 5)
+            {
+                level_escolhido=6;
+            }
+            else if (imenu == 6)
+            {
+                level_escolhido=7;
+            }
+            else if (imenu == 7)
+            {
+                level_escolhido=8;
+            }
+            else if (imenu == 8)
+            {
+                level_escolhido=9;
+            }
+            else if (imenu == 9)
+            {
+                level_escolhido=10;
+            }
+            else if (imenu == 10)
+            {
+                // load_level=1;
+            }
+            else if (imenu == 11)
+            {
+                estado_menu=0;
+            }
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_UP || evento.keyboard.keycode == ALLEGRO_KEY_W)//se tecla pressionada foi w ou seta
+        {
+            imenu--;
+            printf("key up||w\n");
+            if (imenu<0) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu =TAM_MENU_P-1;
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_DOWN || evento.keyboard.keycode == ALLEGRO_KEY_S)//se tecla pressionada foi s ou seta
+        {
+            printf("key down||s\n");
+            imenu++;
+            if (imenu==(TAM_MENU_P)) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu=0;
 
 
+
+        }
+    //desenha=1;
+    if(desenha && al_is_event_queue_empty(fila_eventos))  //desenha menu na tela
+    {
+        for(i=0; i<TAM_MENU_P; i++)
+        {
+            if(i==imenu)
+            {
+                color=al_map_rgb(255,255,255);
+            }
+            else
+            {
+                color=al_map_rgb(255,0,255);
+            }
+            al_draw_textf(fonte_menu, color, 600,50*(i+1), ALLEGRO_ALIGN_CENTRE, submenu_levels[i]);
+
+        }
+
+        al_flip_display();
+        desenha = 0;
+    }
 }
-void submenulevels()
+void submenusettings(int estado_menu)
 {
-    char submenu_m[11][20]= {"LEVEL 1","LEVEL 2","LEVEL 3","LEVEL 4","LEVEL 5","LEVEL 6","LEVEL 7","LEVEL 8","LEVEL 9","LEVEL 10","LOAD LEVEL"}; //matriz menu de niveis
+    char submenu_settings[4][20]= {"EFEITOS SONOROS","MUSICA DE FUNDO","CREDITS","BACK TO MAIN MENU"};
+    int i;
+    int cont_tempo=0;
+    int desenha=0;
+    int settings=0;
+    int imenu=0;
+
+    al_wait_for_event(fila_eventos, &evento);
+    if(evento.type == ALLEGRO_EVENT_TIMER)
+    {
+        al_draw_bitmap(menubmp,0,0,0);
+        cont_tempo++;
+        desenha = 1;
+    }
+    else if (evento.type == ALLEGRO_EVENT_KEY_DOWN)//se tecla foi pressionada
+
+        if (evento.keyboard.keycode == ALLEGRO_KEY_SPACE||evento.keyboard.keycode == ALLEGRO_KEY_ENTER)// se tecla pressionada foi espaço ou enter
+        {
+            printf("space||enter");
+            if (imenu == 0)  //inicia jogo com level 1
+            {
+                settings=1;
+            }
+            else if (imenu == 1)  //submenu mapas
+            {
+                settings=2;
+            }
+            else if (imenu == 2)//submenu personagens
+            {
+                settings=3;//display credits
+            }
+            else if (imenu == 3)  //configuraçoes
+            {
+                estado_menu=0;
+            }
+
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_UP || evento.keyboard.keycode == ALLEGRO_KEY_W)//se tecla pressionada foi w ou seta
+        {
+            imenu--;
+            printf("key up||w\n");
+            if (imenu<0) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu =TAM_MENU_P-1;
+        }
+        else if (evento.keyboard.keycode == ALLEGRO_KEY_DOWN || evento.keyboard.keycode == ALLEGRO_KEY_S)//se tecla pressionada foi s ou seta
+        {
+            printf("key down||s\n");
+            imenu++;
+            if (imenu==(TAM_MENU_P)) //se apertar para cima no primeiro item, seleciona o ultimo
+                imenu=0;
 
 
-}
-void submenusettings(){
 
+        }
+    //desenha=1;
+    if(desenha && al_is_event_queue_empty(fila_eventos))  //desenha menu na tela
+    {
+        for(i=0; i<TAM_MENU_P; i++)
+        {
+            if(i==imenu)
+            {
+                color=al_map_rgb(255,255,255);
+            }
+            else
+            {
+                color=al_map_rgb(255,0,255);
+            }
+            al_draw_textf(fonte_menu, color, 600,50*(i+1), ALLEGRO_ALIGN_CENTRE, submenu_settings[i]);
 
+        }
 
-
-
-
+        al_flip_display();
+        desenha = 0;
+    }
 }
