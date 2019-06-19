@@ -30,20 +30,18 @@
 #define SUBMENU_SETTINGS 4
 #define SAIR_JOGO 5
 
-
-
-
-
 typedef struct entidades{
     int posX,posY;
 }posEntidade;
 
 typedef struct informacoes{
+    int level;
 	int vidas;
 	int numBombas;
+	int numChaves;
+	int score;
 	int posXBomba[MAXBOMBAS]; // esse numero dentro limita quantas bombas pode ter no mapa, se tiver mais q isso, buga
 	int posYBomba[MAXBOMBAS];
-	int score;
 }playerInfo;
 
 ALLEGRO_BITMAP *jogador, *paredeDES, *paredeIND, *caixa, *bomba, *blank, *inimigo, *icon, *key = NULL;
@@ -70,12 +68,6 @@ ALLEGRO_BITMAP *player8=NULL;
 ALLEGRO_FONT *fonte_menu;
 ALLEGRO_COLOR color;
 
-
-
-
-
-
-
 void gotoxy(int x, int y){
    COORD coord = {0,0};
    coord.X = x; coord.Y = y;
@@ -87,9 +79,9 @@ void submenulevels();
 void mainmenu();
 void submenusettings();
 
-void executaJogo        (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA);
-void punch              (char gameMap[][MAXCOLUNA], posEntidade* player);
-int avalia_punch       (char obstaculo, char lado);
+void executaJogo        (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* level);
+void punch              (char gameMap[][MAXCOLUNA], posEntidade* player, playerInfo* PlayerA);
+int avalia_punch        (char obstaculo, char lado);
 void moveEnemy          (char gameMap[][MAXCOLUNA], posEntidade enemy[], int direcao, int i, playerInfo* PlayerA);
 void updateEnemies      (char gameMap[][MAXCOLUNA], posEntidade enemy[], char instrucao, playerInfo* PlayerA);
 void updatePosAllegro   (char gamemap[][MAXCOLUNA], posEntidade* player, char keyPressed);
@@ -98,7 +90,7 @@ void mainMenu		    (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade 
 void comandoJogador     (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], char keyPressed, playerInfo* PlayerA);
 void renderMap		    (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[]);
 void updatePos		    (char gameMap[][MAXCOLUNA], posEntidade* player, char keyPressed, playerInfo* PlayerA);
-void loadGame		    (char gameMap[][MAXCOLUNA], char keyPressed, posEntidade* player, posEntidade enemy[], playerInfo* PlayerA);
+void loadGame		    (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* level);
 int gamePause		    (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA);
 void saveGame		    (char gameMap[][MAXCOLUNA], playerInfo* PlayerA);
 void updateGame		    (char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* cont_tempo);
@@ -266,94 +258,58 @@ void renderMap(char gameMap[MAXLINHA][MAXCOLUNA], posEntidade* player, posEntida
 }
 
 
-void loadGame(char gameMap[][MAXCOLUNA], char keyPressed, posEntidade* player, posEntidade enemy[], playerInfo* PlayerA){
+void loadGame(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* level){
 	FILE *fp;
 	int i,j,k = 0;
+	int indice = 0;
 
-	switch (keyPressed){
-	case 'n':
-		system("cls");
-		fp = fopen("mapa0.txt", "r");
-		for (i = 0; i < MAXLINHA; i++) {
-			for (j = 0; j < MAXCOLUNA; j++) {
-				fscanf(fp, "%c", &gameMap[i][j]);
-			}
-		}
-        fclose(fp);
-		fp = fopen("infomapa0.txt","r");
-		(*PlayerA).vidas = fgetc(fp) - 48;
-		(*PlayerA).numBombas = fgetc(fp) - 48;
-		fclose(fp);
-		break;
-	case 'l':
-		system("cls");
-		printf("Digite qual save quer acessar: (1,2,3)");
+	char arquivo[50] = {0};
+	char extensao[5] = {".txt"};
+	char info[60] = {"info"};
 
-		do{
-			keyPressed = getch();
-		}while (keyPressed != '1' && keyPressed != '2' && keyPressed != '3');
+	gets(arquivo);
 
-		switch (keyPressed){
-		case '1':
-			fp = fopen("save1.txt", "r");
-			for (i = 0; i < MAXLINHA; i++) {
-				for (j = 0; j < MAXCOLUNA; j++) {
-					fscanf(fp, "%c", &gameMap[i][j]);
-				}
-			}
-			fclose(fp);
-			fp = fopen("infoSave1.txt","r");
-			(*PlayerA).vidas = fgetc(fp) - 48;
-			(*PlayerA).numBombas = fgetc(fp) - 48;
-			fclose(fp);
-			break;
-		case '2':
-			fp = fopen("save2.txt", "r");
-			for (i = 0; i < MAXLINHA; i++) {
-				for (j = 0; j < MAXCOLUNA; j++) {
-					fscanf(fp, "%c", &gameMap[i][j]);
-				}
-			}
-			fclose(fp);
-			fp = fopen("infoSave2.txt","r");
-			(*PlayerA).vidas = fgetc(fp) - 48;
-			(*PlayerA).numBombas = fgetc(fp) - 48;
-			fclose(fp);
-			break;
-		case '3':
-			fp = fopen("save3.txt", "r");
-			for (i = 0; i < MAXLINHA; i++) {
-				for (j = 0; j < MAXCOLUNA; j++) {
-					fscanf(fp, "%c", &gameMap[i][j]);
-				}
-			}
-			fclose(fp);
-			fp = fopen("infoSave3.txt","r");
-			(*PlayerA).vidas = fgetc(fp) - 48;
-			(*PlayerA).numBombas = fgetc(fp) - 48;
-			fclose(fp);
-			break;
-		}
+	strcat(arquivo,extensao);
+	fp = fopen(arquivo, "r");
 
-	}
-	renderMap(gameMap, player, enemy);
-	renderAllegro(gameMap);
-    k = 0;
-	for (i = 0; i < MAXLINHA; i++) { // depois de passar o mapa do arquivo para a matriz do jogo, analisa a matriz do jogo caracter por caracter
-		for (j = 0; j < MAXCOLUNA; j++) { // se for o caracter J, define a posição do jogador iniciando naquele local
-			if (gameMap[i][j] == 'J' || gameMap[i][j] == 'a' || gameMap[i][j] == 's' || gameMap[i][j] == 'd' || gameMap[i][j] == 'w') {
-				(*player).posX = j;
-				(*player).posY = i;
-			}
-			else if (gameMap[i][j] == 'E'){ // e faz o mesmo com os inimigos, descobrindo a posição deles e numerando de acordo com o que vem primeiro
-				enemy[k].posX = j;
-				enemy[k].posY = i;
-				k++;
-			}
-		}
-	}
+	for(i=0; i<MAXLINHA; i++){
+        for(j=0; j<MAXCOLUNA; j++){
+            fscanf(fp, "%c", &gameMap[i][j]);
+            //printf("%c",gameMap[i][j]);
+            if (gameMap[i][j] == 'w' || gameMap[i][j] == 'a' || gameMap[i][j] == 's' || gameMap[i][j] == 'd' || gameMap[i][j] == 'J'){
+                (*player).posX = j;
+                (*player).posY = i;
+            }
+            else if (gameMap[i][j] == 'B'){
+                (*PlayerA).posXBomba[indice] = j;
+                (*PlayerA).posYBomba[indice] = i;
+                indice++;
+            }
+            else if (gameMap[i][j] == 'E'){
+                enemy[k].posX = j;
+                enemy[k].posY = i;
+                k++;
+            }
+        }
+    }
+    fclose(fp);
+
+    // se numero de inimigos for menor que 5, destroi tudo por algum motivo, logo, invalidar a posicao dos que ja 'morreram'
+    while (k<5){
+        enemy[k].posX = -1;
+        enemy[k].posY = -1;
+        k++;
+    }
+
+    strcat(info,arquivo);
+    fp = fopen(info,"r");
+    fscanf(fp, "%d\n%d\n%d\n%d\n%d", &(*PlayerA).level, &(*PlayerA).vidas, &(*PlayerA).numBombas,&(*PlayerA).numChaves , &(*PlayerA).score);
+
+    // setup de bombas e inimigos
 	setBomb(gameMap, player, PlayerA, 'l');
 	updateEnemies(gameMap, enemy, 'l', PlayerA);
+	// renderiza o que acabou de receber
+	renderAllegro(gameMap);
 }
 
 int gamePause(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA){
@@ -368,7 +324,7 @@ int gamePause(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[
 		case 27: // funcional
 			break;
 		case 'l': // funcional
-			loadGame(gameMap, opcao, player, enemy, PlayerA);
+			loadGame(gameMap, player, enemy, PlayerA, (*PlayerA).level);
 			break;
 		case 's': // funcional
 			saveGame(gameMap, PlayerA);
@@ -391,10 +347,10 @@ void mainMenu(char gameMap[][MAXCOLUNA], posEntidade *player, posEntidade enemy[
     char keyPressed = getch();
     switch (keyPressed){
     case 'n':
-        loadGame(gameMap, keyPressed, player, enemy, PlayerA);
+        //loadGame(gameMap, keyPressed, player, enemy, PlayerA);
         break;
     case 'l':
-        loadGame(gameMap, keyPressed, player, enemy, PlayerA);
+        //loadGame(gameMap, keyPressed, player, enemy, PlayerA);
         break;
     case 'm':
         //multiplayer();
@@ -429,7 +385,7 @@ void comandoJogador(char gameMap[MAXLINHA][MAXCOLUNA], posEntidade* player, posE
         al_flip_display();
         break;
     case 'p':
-        punch(gameMap, player);
+        punch(gameMap, player, PlayerA);
         //renderMap(gameMap, player, enemy);
         break;
     default:
@@ -437,7 +393,7 @@ void comandoJogador(char gameMap[MAXLINHA][MAXCOLUNA], posEntidade* player, posE
 	}
 }
 
-void punch(char gameMap[][MAXCOLUNA], posEntidade* player){
+void punch(char gameMap[][MAXCOLUNA], posEntidade* player, playerInfo* PlayerA){
     char lado = gameMap[(*player).posY][(*player).posX];
     switch(lado){
         case 'w':
@@ -450,6 +406,11 @@ void punch(char gameMap[][MAXCOLUNA], posEntidade* player){
                 al_draw_bitmap(blank, ((*player).posX)*22, ((*player).posY - 1) * 22, 0);
                 al_draw_bitmap(key, ((*player).posX)*22, ((*player).posY - 1) * 22, 0);
             }
+            else if (avalia_punch(gameMap[(*player).posY - 1][(*player).posX], lado) == 3){
+                gameMap[(*player).posY - 1][(*player).posX] = ' ';
+                al_draw_bitmap(blank, ((*player).posX)*22, ((*player).posY - 1)*22, 0);
+                (*PlayerA).numChaves++;
+            }
             break;
         case 'a':
             if (avalia_punch(gameMap[(*player).posY][(*player).posX - 1], lado) == 1){
@@ -460,6 +421,11 @@ void punch(char gameMap[][MAXCOLUNA], posEntidade* player){
                 gameMap[(*player).posY][(*player).posX - 1] = 'C';
                 al_draw_bitmap(blank, ((*player).posX - 1)*22, ((*player).posY) * 22, 0);
                 al_draw_bitmap(key, ((*player).posX - 1)*22, ((*player).posY) * 22, 0);
+            }
+            else if (avalia_punch(gameMap[(*player).posY][(*player).posX - 1], lado) == 3){
+                gameMap[(*player).posY][(*player).posX - 1] = ' ';
+                al_draw_bitmap(blank, ((*player).posX - 1)*22, (*player).posY*22, 0);
+                (*PlayerA).numChaves++;
             }
             break;
         case 's':
@@ -472,6 +438,11 @@ void punch(char gameMap[][MAXCOLUNA], posEntidade* player){
                 al_draw_bitmap(blank, ((*player).posX)*22, ((*player).posY + 1) * 22, 0);
                 al_draw_bitmap(key, ((*player).posX)*22, ((*player).posY + 1) * 22, 0);
             }
+            else if (avalia_punch(gameMap[(*player).posY + 1][(*player).posX], lado) == 3){
+                gameMap[(*player).posY + 1][(*player).posX] = ' ';
+                al_draw_bitmap(blank, ((*player).posX)*22, ((*player).posY + 1)*22, 0);
+                (*PlayerA).numChaves++;
+            }
             break;
         case 'd':
             if (avalia_punch(gameMap[(*player).posY][(*player).posX + 1], lado) == 1){
@@ -482,6 +453,11 @@ void punch(char gameMap[][MAXCOLUNA], posEntidade* player){
                 gameMap[(*player).posY][(*player).posX + 1] = 'C';
                 al_draw_bitmap(blank, ((*player).posX+1)*22, (*player).posY * 22, 0);
                 al_draw_bitmap(key, ((*player).posX+1)*22, (*player).posY * 22, 0);
+            }
+            else if (avalia_punch(gameMap[(*player).posY][(*player).posX + 1], lado) == 3){
+                gameMap[(*player).posY][(*player).posX + 1] = ' ';
+                al_draw_bitmap(blank, ((*player).posX + 1)*22, (*player).posY*22, 0);
+                (*PlayerA).numChaves++;
             }
             break;
         default:
@@ -505,6 +481,9 @@ int avalia_punch(char obstaculo, char lado){
     case 'K':
         efeitoSonoro = al_load_sample("punch.wav");
         return 2;
+    case 'C':
+        efeitoSonoro = al_load_sample("dlingdling.wav");
+        return 3;
     default:
         efeitoSonoro = al_load_sample("soco.wav");
         return 1;
@@ -652,10 +631,34 @@ void updatePos(char gameMap[][MAXCOLUNA], posEntidade* player, char keyPressed, 
     al_flip_display();
 }
 void saveGame(char gameMap[][MAXCOLUNA], playerInfo* PlayerA){
-	FILE *fp;
-	int i,j;
-	system("cls");
-	printf("Digite o save que voce quer sobrescrever: (1,2,3)\n");
+    FILE * fp;
+    int i,j;
+
+    char arquivo[50] = {0};
+    char info[60]={"info"};
+    char extensao[5] = {".txt"};
+
+    printf("Digite o nome do arquivo onde quer salvar:\n");
+
+    gets(arquivo);
+    strcat(arquivo, extensao);
+
+    system("cls");
+    fp = fopen(arquivo, "w");
+    for(i=0; i<MAXLINHA; i++){
+        for(j=0; j<MAXCOLUNA; j++){
+            fprintf(fp, "%c", gameMap[i][j]);
+            printf("%c",gameMap[i][j]);
+        }
+    }
+    system("pause");
+    fclose(fp);
+
+    strcat(info,arquivo);
+    fp = fopen(info, "w");
+    fprintf(fp,"%d\n%d\n%d\n%d\n%d\n",(*PlayerA).level, (*PlayerA).vidas, (*PlayerA).numBombas, (*PlayerA).numChaves, (*PlayerA).score);
+    fclose(fp);
+	/*printf("Digite o save que voce quer sobrescrever: (1,2,3)\n");
 	char save = getch();
 	switch(save){
 		case '1':
@@ -695,7 +698,7 @@ void saveGame(char gameMap[][MAXCOLUNA], playerInfo* PlayerA){
 			fflush(fp);
 			break;
 	}
-	fclose(fp);
+	fclose(fp);*/
 }
 
 void moveEnemy(char gameMap[][MAXCOLUNA], posEntidade enemy[], int direcao, int i, playerInfo* PlayerA){
@@ -763,6 +766,8 @@ void updateEnemies(char gameMap[][MAXCOLUNA], posEntidade enemy[], char instruca
 
     if (instrucao == 'u'){ // se a funcao for chamada por update de fps (na main)
         for(i=0; i<5; i++){
+            if (enemy[i].posX == -1) continue;
+            else
             switch(direcao[i]){
             case 0: // w y-1
                 if (gameMap[enemy[i].posY - 1][enemy[i].posX] != ' '){
@@ -821,6 +826,7 @@ void updateEnemies(char gameMap[][MAXCOLUNA], posEntidade enemy[], char instruca
             direcao[i] = 8;
         }  // inicializa todas as direcoes a -1 (que é o invalido)
         for (i=0; i<5; i++){
+            if (enemy[i].posX == -1) continue;
             do{
                 if (enemy[i].posX + 1 != ' ' && enemy[i].posX - 1 != ' ' && enemy[i].posY + 1 != ' ' && enemy[i].posY - 1 != ' '){
                     direcao[i] = 2;
@@ -875,7 +881,7 @@ void showPos(posEntidade* player, posEntidade enemy[], playerInfo* PlayerA){
             printf("posBomba[%d] X = %d   Y = %d\n", i, (*PlayerA).posXBomba[i], (*PlayerA).posYBomba[i]);
         }
 	}
-	printf("Vidas Player = %d\nNumBombas = %d\n",(*PlayerA).vidas,(*PlayerA).numBombas);
+	printf("Level = %d\nVidas Player = %d\nNumBombas = %d\nNumChaves = %d\nScore = %d\n",(*PlayerA).level,(*PlayerA).vidas,(*PlayerA).numBombas, (*PlayerA).numChaves,(*PlayerA).score);
 }
 
 void updateGame(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* cont_tempo){
@@ -890,6 +896,15 @@ void updateGame(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enem
 		al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
 		system("PAUSE");
 		mainMenu(gameMap,player,enemy,PlayerA);
+	}
+	if ((*PlayerA).numChaves == 5){
+	    al_draw_text(fonte_menu, al_map_rgb(255, 0, 255), 250, 250, 0, "PASSOU DE FASE");
+        al_flip_display();
+        al_rest(5);
+        al_clear_to_color(al_map_rgb(195,195,195));
+        al_flip_display();
+        // level ++
+        //loadgame(~~~~~~~,level)
 	}
 	if (*cont_tempo >= 15){
         updateEnemies(gameMap, enemy, 'u', PlayerA);
@@ -1011,8 +1026,9 @@ void setBomb(char gameMap[][MAXCOLUNA], posEntidade* player, playerInfo* PlayerA
 }
 
 void explodeBomb(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int indice){
-    int i,j;
-
+    int i,j,k;
+    int posxbomba = (*PlayerA).posXBomba[indice];
+    int posybomba = (*PlayerA).posYBomba[indice];
     /*for(i= - 2; i<3; i++){
         if (gameMap [(*PlayerA).posYBomba[indice] + i] [(*PlayerA).posXBomba[indice]] != 'W'){
             gameMap [(*PlayerA).posYBomba[indice] + i] [(*PlayerA).posXBomba[indice]] = ' ';
@@ -1023,92 +1039,147 @@ void explodeBomb(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade ene
             al_draw_bitmap(blank,((*PlayerA).posXBomba[indice])*22 , ((*PlayerA).posYBomba[indice] + i)*22, 0);
         }
     }*/
-
-    for (i=1; i<3; i++){
-        if (gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] == 'W') break;
-        else if (gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] == gameMap[(*player).posY][(*player).posX]){
+    if (posxbomba == -1 || posybomba == -1) return; // importante
+    for (i=1; i<4; i++){
+        if (gameMap[posybomba - i][posxbomba] == 'W') break;
+        else if (gameMap[posybomba - i][posxbomba] == gameMap[(*player).posY][(*player).posX]){
             takeDmg(PlayerA);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] == 'K'){
-            gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] = 'C';
-            al_draw_bitmap(blank, (*PlayerA).posXBomba[indice]*22, ((*PlayerA).posYBomba[indice] - i)*22, 0);
-            al_draw_bitmap(key,(*PlayerA).posXBomba[indice] * 22, ((*PlayerA).posYBomba[indice] - i) *22, 0);
+        else if (gameMap[posybomba - i][posxbomba] == 'K'){
+            gameMap[posybomba - i][posxbomba] = 'C';
+            al_draw_bitmap(blank, posxbomba * 22, (posybomba - i) * 22, 0);
+            al_draw_bitmap(key, posxbomba * 22, (posybomba - i) * 22, 0);
+            efeitoSonoro = al_load_sample("dlingdling.wav");
+            al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] == 'C'){
+        else if (gameMap[posybomba - i][posxbomba] == 'C'){
             continue;
         }
+        else if (gameMap[posybomba - i][posxbomba] == 'E'){
+            for(k = 0; k<5; k++){
+                if (enemy[k].posY == posybomba - i && enemy[k].posX == posxbomba){
+                    al_draw_bitmap(blank, enemy[k].posX*22, enemy[k].posY*22, 0);
+                    gameMap[enemy[k].posY][enemy[k].posX] = ' ';
+                    enemy[k].posX = -1;
+                    enemy[k].posY = -1;
+                    (*PlayerA).score = (*PlayerA).score + 100;
+                    efeitoSonoro = al_load_sample("wilhelmscream.wav");
+                    al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+                }
+            }
+        }
         else{
-            gameMap[(*PlayerA).posYBomba[indice] - i][(*PlayerA).posXBomba[indice]] = ' ';
-            al_draw_bitmap(blank, (*PlayerA).posXBomba[indice]*22, ((*PlayerA).posYBomba[indice] - i)*22, 0);
+            gameMap[posybomba - i][posxbomba] = ' ';
+            al_draw_bitmap(blank, posxbomba*22, (posybomba - i)*22, 0);
             continue;
         }
     }
 
-    for (i=1; i<3; i++){
-        if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] == 'W') break;
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] == gameMap[(*player).posY][(*player).posX]){
+    for (i=1; i<4; i++){
+        if (gameMap[posybomba][posxbomba - i] == 'W') break;
+        else if (gameMap[posybomba][posxbomba - i] == gameMap[(*player).posY][(*player).posX]){
             takeDmg(PlayerA);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] == 'K'){
-            gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] = 'C';
-            al_draw_bitmap(blank, ((*PlayerA).posXBomba[indice] - i)*22, (*PlayerA).posYBomba[indice]*22, 0);
-            al_draw_bitmap(key, ((*PlayerA).posXBomba[indice] - i)*22, (*PlayerA).posYBomba[indice]*22, 0);
+        else if (gameMap[posybomba][posxbomba - i] == 'K'){
+            gameMap[posybomba][posxbomba - i] = 'C';
+            al_draw_bitmap(blank, (posxbomba - i)*22, posybomba*22, 0);
+            al_draw_bitmap(key, (posxbomba - i)*22, posybomba*22, 0);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] == 'C'){
+        else if (gameMap[posybomba][posxbomba - i] == 'E'){
+            for(k = 0; k<5; k++){
+                if (enemy[k].posY == posybomba && enemy[k].posX == posxbomba - i){
+                    al_draw_bitmap(blank, enemy[k].posX*22, enemy[k].posY*22, 0);
+                    gameMap[enemy[k].posY][enemy[k].posX] = ' ';
+                    enemy[k].posX = -1;
+                    enemy[k].posY = -1;
+                    (*PlayerA).score = (*PlayerA).score + 100;
+                    efeitoSonoro = al_load_sample("wilhelmscream.wav");
+                    al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+                }
+            }
+        }
+        else if (gameMap[posybomba][posxbomba - i] == 'C'){
             continue;
         }
         else{
-            gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] - i] = ' ';
-            al_draw_bitmap(blank, ((*PlayerA).posXBomba[indice] - i)*22, (*PlayerA).posYBomba[indice]*22, 0);
+            gameMap[posybomba][posxbomba - i] = ' ';
+            al_draw_bitmap(blank, (posxbomba - i)*22, posybomba*22, 0);
             continue;
         }
     }
 
-    for (i=1; i<3; i++){
-        if (gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] == 'W') break;
-        else if (gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] == gameMap[(*player).posY][(*player).posX]){
+    for (i=1; i<4; i++){
+        if (gameMap[posybomba + i][posxbomba] == 'W') break;
+        else if (gameMap[posybomba + i][posxbomba] == gameMap[(*player).posY][(*player).posX]){
             takeDmg(PlayerA);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] == 'K'){
-            gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] = 'C';
-            al_draw_bitmap(blank, (*PlayerA).posXBomba[indice]*22, ((*PlayerA).posYBomba[indice] + i)*22, 0);
-            al_draw_bitmap(key, (*PlayerA).posXBomba[indice]*22, ((*PlayerA).posYBomba[indice] + i)*22, 0);
+        else if (gameMap[posybomba + i][posxbomba] == 'K'){
+            gameMap[posybomba + i][posxbomba] = 'C';
+            al_draw_bitmap(blank, posxbomba*22, (posybomba + i)*22, 0);
+            al_draw_bitmap(key, posxbomba*22, (posybomba + i)*22, 0);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] == 'C'){
+        else if (gameMap[posybomba + i][posxbomba] == 'C'){
             continue;
         }
+        else if (gameMap[posybomba + i][posxbomba] == 'E'){
+            for(k = 0; k<5; k++){
+                if (enemy[k].posY == posybomba + i && enemy[k].posX == posxbomba){
+                    al_draw_bitmap(blank, enemy[k].posX*22, enemy[k].posY*22, 0);
+                    gameMap[enemy[k].posY][enemy[k].posX] = ' ';
+                    enemy[k].posX = -1;
+                    enemy[k].posY = -1;
+                    (*PlayerA).score = (*PlayerA).score + 100;
+                    efeitoSonoro = al_load_sample("wilhelmscream.wav");
+                    al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+                }
+            }
+        }
         else{
-            gameMap[(*PlayerA).posYBomba[indice] + i][(*PlayerA).posXBomba[indice]] = ' ';
-            al_draw_bitmap(blank, (*PlayerA).posXBomba[indice]*22, ((*PlayerA).posYBomba[indice] + i)*22, 0);
+            gameMap[posybomba + i][posxbomba] = ' ';
+            al_draw_bitmap(blank, posxbomba*22, (posybomba + i)*22, 0);
             continue;
         }
     }
 
-    for (i=1; i<3; i++){
-        if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] == 'W') break;
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] == gameMap[(*player).posY][(*player).posX]){
+    for (i=1; i<4; i++){
+        if (gameMap[posybomba][posxbomba + i] == 'W') break;
+        else if (gameMap[posybomba][posxbomba + i] == gameMap[(*player).posY][(*player).posX]){
             takeDmg(PlayerA);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] == 'K'){
-            gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] = 'C';
-            al_draw_bitmap(blank, ((*PlayerA).posXBomba[indice] + i)*22, (*PlayerA).posYBomba[indice]*22, 0);
-            al_draw_bitmap(key, ((*PlayerA).posXBomba[indice] + i)*22, (*PlayerA).posYBomba[indice]*22, 0);
+        else if (gameMap[posybomba][posxbomba + i] == 'K'){
+            gameMap[posybomba][posxbomba + i] = 'C';
+            al_draw_bitmap(blank, (posxbomba + i)*22, posybomba*22, 0);
+            al_draw_bitmap(key, (posxbomba + i)*22, posybomba*22, 0);
         }
-        else if (gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] == 'C'){
+        else if (gameMap[posybomba][posxbomba + i] == 'C'){
             continue;
         }
+        else if (gameMap[posybomba][posxbomba + i] == 'E'){
+            for(k = 0; k<5; k++){
+                if (enemy[k].posY == posybomba && enemy[k].posX == posxbomba + i){
+                    al_draw_bitmap(blank, enemy[k].posX*22, enemy[k].posY*22, 0);
+                    gameMap[enemy[k].posY][enemy[k].posX] = ' ';
+                    enemy[k].posX = -1;
+                    enemy[k].posY = -1;
+                    (*PlayerA).score = (*PlayerA).score + 100;
+                    efeitoSonoro = al_load_sample("wilhelmscream.wav");
+                    al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+                }
+            }
+        }
         else{
-            gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice] + i] = ' ';
-            al_draw_bitmap(blank, ((*PlayerA).posXBomba[indice] + i)*22, (*PlayerA).posYBomba[indice]*22, 0);
+            gameMap[posybomba][posxbomba + i] = ' ';
+            al_draw_bitmap(blank, (posxbomba + i)*22, posybomba*22, 0);
             continue;
         }
     }
-
     //gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice]] = ' ';
     //al_draw_bitmap(blank,((*PlayerA).posXBomba[indice] + i)*22 , ((*PlayerA).posYBomba[indice] + i)*22, 0);
-
-    al_draw_bitmap(blank, (*PlayerA).posXBomba[indice]*22, (*PlayerA).posYBomba[indice]*22, 0);
-    gameMap[(*PlayerA).posYBomba[indice]][(*PlayerA).posXBomba[indice]] = ' ';
+    (*PlayerA).numBombas++;
+    al_draw_bitmap(blank, posxbomba*22, posybomba*22, 0);
+    efeitoSonoro = al_load_sample("explosion.wav");
+    al_play_sample(efeitoSonoro, 1.0, 0.0, 1.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+    gameMap[posybomba][posxbomba] = ' ';
     renderMap(gameMap,player,enemy);
     (*PlayerA).posXBomba[indice] = -1; // invalida a bomba, permite sobrescrever em outro setBomb()
 
@@ -1120,13 +1191,14 @@ int main(){
 
     posEntidade player, enemy[5];
     playerInfo PlayerA;
+    PlayerA.numChaves = 0;
     srand(time(NULL));
     initializeAllegro();
     //system("pause");
     //mainMenu(gameMap, &player, enemy, &PlayerA);
 
-    int char_escolhido=0;
-    int level_escolhido=0;
+    int char_escolhido = 0;
+    int level_escolhido = 0;
     int load_level=0;
 
     while(estado_menu != SAIR_JOGO)
@@ -1137,7 +1209,7 @@ int main(){
         }
         else if (estado_menu  == PLAY)//se no menu for selecionado jogar entra nesta condiçao
         {
-            executaJogo(gameMap, &player, enemy, &PlayerA);
+            executaJogo(gameMap, &player, enemy, &PlayerA, &level_escolhido);
         }
         else if (estado_menu == SUBMENU_LEVELS)//se no menu for selecionado submenu de escolher levels entra nesta condiçao
         {
@@ -1165,12 +1237,12 @@ int main(){
     al_destroy_audio_stream(musicaFundo);
 }
 
-void executaJogo(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA){
+void executaJogo(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade enemy[], playerInfo* PlayerA, int* level){
     char keyPressed;
     int cont_tempo = 0;
     int desenha = 0;
 
-    loadGame(gameMap, 'n', player, enemy, PlayerA);
+    loadGame(gameMap, player, enemy, PlayerA, level);
     while(1){
         ALLEGRO_EVENT evento;
         al_wait_for_event(fila_eventos, &evento);
@@ -1207,6 +1279,7 @@ void executaJogo(char gameMap[][MAXCOLUNA], posEntidade* player, posEntidade ene
                 break;
             }
             comandoJogador(gameMap, player, enemy, keyPressed, PlayerA);
+            showPos(player, enemy, PlayerA);
         }
         if(desenha && al_is_event_queue_empty(fila_eventos))  //desenha menu na tela
         {
@@ -1618,65 +1691,111 @@ void submenulevels(int *estado_menu, int *level_escolhido, int *load_level)
 }
 void submenusettings(int *estado_menu)
 {
-    char submenu_settings[4][20]= {"EFEITOS SONOROS","MUSICA DE FUNDO","CREDITS","BACK TO MAIN MENU"};
+    char submenu_settings[6][50]= {"EFEITOS SONOROS","MUSICA DE FUNDO","TAMANHO TELA DE JOGO","MODO DE JOGO","CREDITS","BACK TO MAIN MENU"};
+    char screen_sizes[4][10]= {"800x450","1200x720","1600x900","1920x1080"};
+    char percent[11][6]= {"(100%)","(90%)","(80%)","(70%)","(60%)","(50%)","(40%)","(30%)","(20%)","(10%)","0%"};
+    char game_screen_mode[2][50]= {"FULLSCREEN","ZOOM"};
     int i;
     int cont_tempo=0;
     int desenha=0;
     int settings=0;
     int imenu=0;
+    int imenu1=0;
+    int imenu2=0;
+    int imenu4=1;
     while(*estado_menu ==4)
     {
         ALLEGRO_EVENT evento;
         al_wait_for_event(fila_eventos, &evento);
-        if(evento.type == ALLEGRO_EVENT_TIMER)
-        {
-            al_draw_bitmap(menubmp,0,0,0);
-            cont_tempo++;
-            desenha = 1;
-        }
-        else if (evento.type == ALLEGRO_EVENT_KEY_DOWN)//se tecla foi pressionada
+        if (evento.type == ALLEGRO_EVENT_KEY_DOWN)//se tecla foi pressionada
         {
 
             if (evento.keyboard.keycode == ALLEGRO_KEY_SPACE||evento.keyboard.keycode == ALLEGRO_KEY_ENTER)// se tecla pressionada foi espaço ou enter
             {
                 printf("space||enter");
-                if (imenu == 0)  //inicia jogo com level 1
+
+                if (imenu == 4)//submenu personagens
                 {
-                    settings=1;
+                    settings=5;//display credits
                 }
-                else if (imenu == 1)  //submenu mapas
-                {
-                    settings=2;
-                }
-                else if (imenu == 2)//submenu personagens
-                {
-                    settings=3;//display credits
-                }
-                else if (imenu == 3)  //configuraçoes
+                else if (imenu == 5)  //configuraçoes
                 {
                     *estado_menu=0;
                     break;
                 }
+
+            }
+            else if (evento.keyboard.keycode == ALLEGRO_KEY_LEFT || evento.keyboard.keycode == ALLEGRO_KEY_A)// se tecla pressionada foi espaço ou enter
+            {
+                printf("space||enter");
+
+                if (imenu == 0)
+                {
+                        imenu1++;
+                        if (imenu1>=11)
+                        imenu1=0;
+
+                }
+                else if (imenu == 2)
+                {
+                        imenu2--;
+                        if (imenu2<0)
+                        imenu2=3;
+                }
+                else if (imenu == 3)
+                {
+                        imenu4--;
+                        if (imenu4<0)
+                        imenu4=1;
+                }
+
+            }
+           else if (evento.keyboard.keycode == ALLEGRO_KEY_RIGHT || evento.keyboard.keycode == ALLEGRO_KEY_D)// se tecla pressionada foi espaço ou enter
+            {
+                printf("space||enter");
+
+                if (imenu == 0)
+                {
+                    imenu1--;
+                        if (imenu1<0)
+                        imenu1=10;
+                }
+                else if (imenu == 2)
+                {
+                        imenu2++;
+                        if (imenu2>=4)
+                        imenu2=0;
+                }
+                else if (imenu == 3)
+                {
+                        imenu4++;
+                        if (imenu4>=2)
+                        imenu4=0;
+                }
+
             }
             else if (evento.keyboard.keycode == ALLEGRO_KEY_UP || evento.keyboard.keycode == ALLEGRO_KEY_W)//se tecla pressionada foi w ou seta
             {
                 imenu--;
                 printf("key up||w\n");
                 if (imenu<0) //se apertar para cima no primeiro item, seleciona o ultimo
-                    imenu =TAM_MENU_P-1;
+                    imenu =5;
             }
             else if (evento.keyboard.keycode == ALLEGRO_KEY_DOWN || evento.keyboard.keycode == ALLEGRO_KEY_S)//se tecla pressionada foi s ou seta
             {
                 printf("key down||s\n");
                 imenu++;
-                if (imenu==(TAM_MENU_P)) //se apertar para cima no primeiro item, seleciona o ultimo
+                if (imenu==6) //se apertar para cima no primeiro item, seleciona o ultimo
                     imenu=0;
+
+
+
             }
         }
         //desenha=1;
         if(desenha && al_is_event_queue_empty(fila_eventos))  //desenha menu na tela
         {
-            for(i=0; i<4; i++)
+            for(i=0; i<6; i++)
             {
                 if(i==imenu)
                 {
@@ -1686,22 +1805,15 @@ void submenusettings(int *estado_menu)
                 {
                     color=al_map_rgb(255,0,255);
                 }
-                al_draw_textf(fonte_menu, color, 600,50*(i+1), ALLEGRO_ALIGN_CENTRE, submenu_settings[i]);
+                al_draw_textf(fonte_menu, color, 100,((50*i)+200), ALLEGRO_ALIGN_LEFT, submenu_settings[i]);
 
             }
+            al_draw_textf(fonte_menu, color, 900,200, ALLEGRO_ALIGN_RIGHT, percent[imenu1]);
+            al_draw_textf(fonte_menu, color, 900,250, ALLEGRO_ALIGN_RIGHT, percent[imenu1]);
+            al_draw_textf(fonte_menu, color, 900,300, ALLEGRO_ALIGN_CENTER, screen_sizes[imenu2]);
+            al_draw_textf(fonte_menu, color, 900,350, ALLEGRO_ALIGN_CENTER, game_screen_mode[imenu4]);
             al_flip_display();
             desenha = 0;
         }
     }
 }
-    // parametros para jogar posEntidade em funcao >> &player/&enemy
-    // receber como *posEntidade player
-
-
-    	//showPos(&player, enemy, &PlayerA);
-    	//al_wait_for_event(fila_eventos, &evento);
-       /* while(!kbhit()){// (evento.type == ALLEGRO_EVENT_TIMER){
-                Sleep(100);
-                updateGame(gameMap, &player, enemy, &PlayerA);
-                showPos(&player, enemy, &PlayerA);
-        }*/
